@@ -44,9 +44,9 @@ producing a similar effect like the HDR photos taken by smartphones.
 
 <h5 align="center">Abstract</h5>
 
-By encoding images into latent noise with VAE, <ins>TimothyAlexisVass</ins> also discovered the value ranges for VAE to decode are within `-4` to `4`. 
-This means that if the final latent noise has a smaller value range, then some precision is wasted. 
-Therefore, I also tried to write a function that can make the latent noise utilize the full color depth,
+By encoding images into latent noise with VAE, <ins>TimothyAlexisVass</ins> discovered that the values for VAE to decode are usually within a certain range, 
+and thus theorized that if the final latent noise has a smaller value range, then some precision is essentailly wasted. 
+This gave me an idea to write a function that can make the latent noise utilize the full color depth,
 making the final output more **vibrant** and **contrasty**.
 
 <h5 align="center">Effects</h5>
@@ -103,4 +103,12 @@ As a result, bright areas will get brighter and dark areas will get darker; Addi
 
 <hr>
 
-*Most likely incompatible with [Vectorscope CC](https://github.com/Haoming02/sd-webui-vectorscope-cc)*
+<details>
+<summary>Debug</summary>
+
+1. This also comes with the script `tensor_debug.py`
+2. You can enable it in the `System` section of **Settings** tab
+3. It will plot out the values of the Tensor during the generation, and save to the `debug` folder in `output`
+4. *Perhaps you can make some interesting discoveries too?*
+5. The folder will be deleted whenever the UI is reloaded/closed
+</details>

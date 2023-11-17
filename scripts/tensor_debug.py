@@ -3,12 +3,15 @@ from modules import script_callbacks, shared
 import matplotlib.pyplot as plt
 import numpy as np
 import datetime
+import shutil
 import os
 
 original_callback = KDiffusionSampler.callback_state
 
 CH = []
 Steps = []
+
+Debug_Folders = []
 
 LABEL = ['dimgrey', 'lime', 'cyan', 'gold']
 
@@ -20,13 +23,16 @@ def debug_callback(self, d):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
+    global Debug_Folders
+    Debug_Folders.append(output_folder)
+
     global CH
     global Steps
     if d['i'] == 0:
         CH = []
         Steps = []
         for i in range(4):
-            CH.append({'min':[], 'max':[], 'mean':[]})
+            CH.append({'min':[], 'max':[], 'mean':[], 'std':[]})
 
     Steps.append(d['i'] + 1)
 
@@ -34,12 +40,13 @@ def debug_callback(self, d):
         CH[i]['min'].append(round(float(d['x'][0][i].min()), 4))
         CH[i]['max'].append(round(float(d['x'][0][i].max()), 4))
         CH[i]['mean'].append(round(float(d['x'][0][i].mean()), 4))
+        CH[i]['std'].append(round(float(d['x'][0][i].std()), 4))
 
     if (d['i'] + 1) == self.p.steps:
         x = np.array(Steps)
         t = datetime.datetime.now().strftime("%m.%d-%H.%M.%S")
 
-        for mode in ['mean']: # 'min', 'max'
+        for mode in ['mean', 'std']: # 'min', 'max'
             for i in range(4):
                 y = np.array(CH[i][mode])
                 plt.plot(x, y, label=f'{i}', color=LABEL[i])
@@ -56,6 +63,8 @@ KDiffusionSampler.callback_state = debug_callback
 
 def restore_callback():
     KDiffusionSampler.callback_state = original_callback
+    for d in Debug_Folders:
+        shutil.rmtree(d)
 
 script_callbacks.on_script_unloaded(restore_callback)
 
