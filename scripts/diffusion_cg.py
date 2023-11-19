@@ -1,28 +1,35 @@
 from modules.sd_samplers_kdiffusion import KDiffusionSampler
 from modules import script_callbacks
 import modules.scripts as scripts
+from modules import shared
 import gradio as gr
 
-VERSION = 'v0.1.0'
+
+VERSION = 'v0.1.1'
+
 
 # luminance = 0.2126 * R + 0.7152 * G + 0.0722 * B
 # LUTS: [-K, -M, C, Y]
 
 LUTS = [0.0, -0.5152, 0.0126, -0.1278]
-DYNAMIC_RANGE = [4.0, 2.5, 2.5, 2.5]
+
+
+# https://github.com/AUTOMATIC1111/stable-diffusion-webui/blob/master/configs/v1-inference.yaml#L17
+# (1.0 / 0.18215) / 2 = 2.74499039253
+
+DYNAMIC_RANGE = [2.74, 2.74, 2.74, 2.74]
+
 
 def normalize_tensor(x, r):
-    x_max = abs(round(float(x.max()), 2))
-    x_min = abs(round(float(x.min()), 2))
-    x_mean = x.mean()
+    x_min = float(x.min())
+    x_max = float(x.max())
 
-    ratio = min(r / x_max, r / x_min)
+    ratio = r / max(abs(x_min), abs(x_max))
+
     if ratio < 1.0:
         return x
-
-    x = (x - x_mean) * ratio + x_mean
-
-    return x
+    else:
+        return x * ratio
 
 
 original_callback = KDiffusionSampler.callback_state
@@ -38,7 +45,7 @@ def center_callback(self, d):
             if self.diffcg_recenter:
                 d['x'][b][i] += (LUTS[i] - d['x'][b][i].mean())
 
-            if self.diffcg_normalize and (d['i'] + 1) == self.diffcg_steps:
+            if self.diffcg_normalize and (d['i'] + 1) == self.diffcg_last_step:
                 d['x'][b][i] = normalize_tensor(d['x'][b][i], DYNAMIC_RANGE[i])
 
     return original_callback(self, d)
@@ -69,11 +76,18 @@ class DiffusionCG(scripts.Script):
 
         return [enableG, enableC, enableN]
 
+    def before_hr(self, p, *args):
+        KDiffusionSampler.diffcg_enable = False
+
     def process(self, p, enableG:bool, enableC:bool, enableN:bool):
-        KDiffusionSampler.diffcg_steps = p.steps
         KDiffusionSampler.diffcg_enable = enableG
         KDiffusionSampler.diffcg_recenter = enableC
         KDiffusionSampler.diffcg_normalize = enableN
+
+        if not hasattr(p, 'enable_hr') and hasattr(p, 'denoising_strength') and not shared.opts.img2img_fix_steps:
+            KDiffusionSampler.diffcg_last_step = int(p.steps * p.denoising_strength) + 1
+        else:
+            KDiffusionSampler.diffcg_last_step = p.steps
 
 
 def restore_callback():

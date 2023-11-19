@@ -10,6 +10,7 @@ producing a more **neutral** and **balanced**, but also **vibrant** and **contra
 > This is the fruition of the joint research between [TimothyAlexisVass](https://github.com/TimothyAlexisVass) with their findings, and me with my experience in developing [Vectorscope CC](https://github.com/Haoming02/sd-webui-vectorscope-cc)
 
 This Extension comes with two main features, **Recenter** and **Normalization**:
+> The features are disabled during Hires. fix pass
 
 ### Recenter
 
@@ -53,6 +54,8 @@ making the final output more **vibrant** and **contrasty**.
 
 When you enable the feature, the latent noise will attempt to span across the value ranges if possible, before getting decoded by the VAE. 
 As a result, bright areas will get brighter and dark areas will get darker; Additional details may also be introduced in these areas.
+
+> Seems to have less effects when not using `Euler` sampler...
 
 <h5 align="center">Samples</h5>
 
