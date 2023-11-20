@@ -10,7 +10,6 @@ producing a more **neutral** and **balanced**, but also **vibrant** and **contra
 > This is the fruition of the joint research between [TimothyAlexisVass](https://github.com/TimothyAlexisVass) with their findings, and me with my experience in developing [Vectorscope CC](https://github.com/Haoming02/sd-webui-vectorscope-cc)
 
 This Extension comes with two main features, **Recenter** and **Normalization**:
-> The features are disabled during Hires. fix pass
 
 ### Recenter
 
@@ -57,6 +56,8 @@ As a result, bright areas will get brighter and dark areas will get darker; Addi
 
 > Seems to have less effects when not using `Euler` sampler...
 
+> This feature is disabled during Hires. fix pass
+
 <h5 align="center">Samples</h5>
 
 <p align="center">
@@ -86,6 +87,8 @@ As a result, bright areas will get brighter and dark areas will get darker; Addi
 <img src="samples\cn_xl_on.jpg" width=384>
 <br><code>Off | On</code><br>
 </p>
+
+> Some sample images were generated using older versions of the Extension. I will update all of them again when the Extension is finally out of experimental stage.
 
 ## To Do
 - [ ] Parameter Settings

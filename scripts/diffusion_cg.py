@@ -5,7 +5,7 @@ from modules import shared
 import gradio as gr
 
 
-VERSION = 'v0.1.1'
+VERSION = 'v0.1.2'
 
 
 # luminance = 0.2126 * R + 0.7152 * G + 0.0722 * B
@@ -17,7 +17,7 @@ LUTS = [0.0, -0.5152, 0.0126, -0.1278]
 # https://github.com/AUTOMATIC1111/stable-diffusion-webui/blob/master/configs/v1-inference.yaml#L17
 # (1.0 / 0.18215) / 2 = 2.74499039253
 
-DYNAMIC_RANGE = [2.74, 2.74, 2.74, 2.74]
+DYNAMIC_RANGE = 2.745
 
 
 def normalize_tensor(x, r):
@@ -46,7 +46,7 @@ def center_callback(self, d):
                 d['x'][b][i] += (LUTS[i] - d['x'][b][i].mean())
 
             if self.diffcg_normalize and (d['i'] + 1) == self.diffcg_last_step:
-                d['x'][b][i] = normalize_tensor(d['x'][b][i], DYNAMIC_RANGE[i])
+                d['x'][b][i] = normalize_tensor(d['x'][b][i], DYNAMIC_RANGE)
 
     return original_callback(self, d)
 
@@ -77,14 +77,14 @@ class DiffusionCG(scripts.Script):
         return [enableG, enableC, enableN]
 
     def before_hr(self, p, *args):
-        KDiffusionSampler.diffcg_enable = False
+        KDiffusionSampler.diffcg_normalize = False
 
     def process(self, p, enableG:bool, enableC:bool, enableN:bool):
         KDiffusionSampler.diffcg_enable = enableG
         KDiffusionSampler.diffcg_recenter = enableC
         KDiffusionSampler.diffcg_normalize = enableN
 
-        if not hasattr(p, 'enable_hr') and hasattr(p, 'denoising_strength') and not shared.opts.img2img_fix_steps:
+        if not hasattr(p, 'enable_hr') and hasattr(p, 'denoising_strength') and not shared.opts.img2img_fix_steps and p.denoising_strength < 1.0:
             KDiffusionSampler.diffcg_last_step = int(p.steps * p.denoising_strength) + 1
         else:
             KDiffusionSampler.diffcg_last_step = p.steps

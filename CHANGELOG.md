@@ -1,3 +1,6 @@
+### v0.1.2 - 2023 Nov.20
+- Improved(?) **Normalization**
+
 ### v0.1.1 - 2023 Nov.20
 - Improved(?) **Normalization**
 
