@@ -24,7 +24,8 @@ def debug_callback(self, d):
         os.makedirs(output_folder)
 
     global Debug_Folders
-    Debug_Folders.append(output_folder)
+    if output_folder not in Debug_Folders:
+        Debug_Folders.append(output_folder)
 
     global CH
     global Steps
