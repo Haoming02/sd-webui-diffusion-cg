@@ -54,9 +54,8 @@ making the final output more **vibrant** and **contrasty**.
 When you enable the feature, the latent noise will attempt to span across the value ranges if possible, before getting decoded by the VAE. 
 As a result, bright areas will get brighter and dark areas will get darker; Additional details may also be introduced in these areas.
 
-> Seems to have less effects when not using `Euler` sampler...
+> This feature is currently disabled during Hires. fix pass
 
-> This feature is disabled during Hires. fix pass
 
 <h5 align="center">Samples</h5>
 
@@ -72,7 +71,9 @@ As a result, bright areas will get brighter and dark areas will get darker; Addi
 <br><code>Off | On</code><br>
 </p>
 
-<h4 align="center">Combined</h4>
+<p align="right"><sub><i>*Works better when <b>Recenter</b> is also on</i></sub></p>
+
+<h3 align="center">Combined</h3>
 <p align="center">Finally, you can also enable both features at the same time, creating some really stunning results!</p>
 
 <p align="center">
