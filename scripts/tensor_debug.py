@@ -47,7 +47,7 @@ def debug_callback(self, d):
         x = np.array(Steps)
         t = datetime.datetime.now().strftime("%m.%d-%H.%M.%S")
 
-        for mode in ['mean', 'std']: # 'min', 'max'
+        for mode in ['mean', 'min', 'max']: # 'min', 'max', 'std'
             for i in range(4):
                 y = np.array(CH[i][mode])
                 plt.plot(x, y, label=f'{i}', color=LABEL[i])

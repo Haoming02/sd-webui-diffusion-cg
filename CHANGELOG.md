@@ -1,3 +1,6 @@
+### v0.2.0 - 2023 Nov.21
+- Better **SDXL** Support
+
 ### v0.1.3 - 2023 Nov.20
 - Improved **Compatibility**
 - 
