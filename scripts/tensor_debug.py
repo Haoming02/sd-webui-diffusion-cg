@@ -23,12 +23,13 @@ def debug_callback(self, d):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
+    global CH
+    global Steps
     global Debug_Folders
+
     if output_folder not in Debug_Folders:
         Debug_Folders.append(output_folder)
 
-    global CH
-    global Steps
     if d['i'] == 0:
         CH = []
         Steps = []
@@ -47,12 +48,13 @@ def debug_callback(self, d):
         x = np.array(Steps)
         t = datetime.datetime.now().strftime("%m.%d-%H.%M.%S")
 
-        for mode in ['mean', 'min', 'max']: # 'min', 'max', 'std'
+        for mode in ['mean']: # 'min', 'max', 'std'
             for i in range(4):
                 y = np.array(CH[i][mode])
                 plt.plot(x, y, label=f'{i}', color=LABEL[i])
+                plt.annotate(f'{round(CH[i][mode][-1], 2)}', xy=(Steps[-1] - 1, CH[i][mode][-1] + 0.02), xycoords='data')
 
-            plt.legend()
+            plt.legend(loc='lower left')
             plt.title(f'channel-{mode} Graph')
             plt.xlabel("Steps")
             plt.savefig(os.path.join(output_folder, f'{t}-{mode}.png'), dpi=300)

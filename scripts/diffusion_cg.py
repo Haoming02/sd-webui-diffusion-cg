@@ -1,11 +1,9 @@
 from modules.sd_samplers_kdiffusion import KDiffusionSampler
+from scripts.cg_version import VERSION
 from modules import script_callbacks
 import modules.scripts as scripts
 from modules import shared
 import gradio as gr
-
-
-VERSION = 'v0.2.0'
 
 
 # luminance = 0.2126 * R + 0.7152 * G + 0.0722 * B
@@ -23,7 +21,7 @@ LUTS = {
 
 DYNAMIC_RANGE = {
     'Default': [3.2, 2.5, 2.5, 2.5],
-    'Maximize': [3.839, 2.745, 2.745, 2.745]
+    'Maximize (noisy)': [3.839, 2.745, 2.745, 2.745]
 }
 
 
@@ -55,7 +53,7 @@ def center_callback(self, d):
         for i in range(channels):
 
             if self.diffcg_recenter:
-                d['x'][b][i] += (LUTS[self.diffcg_arch][i] - d['x'][b][i].mean())
+                d['x'][b][i] += (LUTS[self.diffcg_arch][i] - d['x'][b][i].mean()) * self.diffcg_recenter_strength
 
             if self.diffcg_normalize and (d['i'] + 1) >= self.diffcg_last_step - 1:
                 d[self.diffcg_tensor][b][i] = normalize_tensor(d[self.diffcg_tensor][b][i], DYNAMIC_RANGE[self.diffcg_normalize_strength][i])
@@ -79,29 +77,29 @@ class DiffusionCG(scripts.Script):
                 enableG = gr.Checkbox(label="Enable (Global)")
                 sd_ver = gr.Radio(['1.5', 'XL'], value='1.5', label="Stable Diffusion Version")
 
-            gr.Markdown('<hr>')
-
             with gr.Row():
                 with gr.Group():
                     gr.Markdown('<h3 align="center">Recenter</h3>')
-                    enableC = gr.Checkbox(label="Enable")
+                    rc_str = gr.Slider(label="Effect Strength", minimum=0.0, maximum=1.0, step=0.2, value=0.0)
 
                 with gr.Group():
                     gr.Markdown('<h3 align="center">Normalization</h3>')
-                    enableN = gr.Checkbox(label="Enable")
-                    n_str = gr.Radio(['Default', 'Maximize'], value='Default', label="Effect Strength")
+                    n_str = gr.Radio(['None', 'Default', 'Maximize (noisy)'], value='None', label="Effect Strength")
 
-        return [enableG, sd_ver, enableC, enableN, n_str]
+        return [enableG, sd_ver, rc_str, n_str]
 
     def before_hr(self, p, *args):
         KDiffusionSampler.diffcg_normalize = False
 
-    def process(self, p, enableG:bool, sd_ver:str, enableC:bool, enableN:bool, n_str:str):
+    def process(self, p, enableG:bool, sd_ver:str, rc_str:float, n_str:str):
         KDiffusionSampler.diffcg_enable = enableG
         KDiffusionSampler.diffcg_arch = sd_ver
-        KDiffusionSampler.diffcg_recenter = enableC
-        KDiffusionSampler.diffcg_normalize = enableN
+
+        KDiffusionSampler.diffcg_recenter = rc_str > 0.0
+        KDiffusionSampler.diffcg_normalize = n_str != 'None'
+        KDiffusionSampler.diffcg_recenter_strength = rc_str
         KDiffusionSampler.diffcg_normalize_strength = n_str
+
         KDiffusionSampler.diffcg_tensor = 'x' if p.sampler_name.strip() == 'Euler' else 'denoised'
 
         if not hasattr(p, 'enable_hr') and hasattr(p, 'denoising_strength') and not shared.opts.img2img_fix_steps and p.denoising_strength < 1.0:

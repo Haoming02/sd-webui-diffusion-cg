@@ -1,3 +1,6 @@
+### v0.2.1 - 2023 Nov.23
+- Add **Effect Strength** Settings
+
 ### v0.2.0 - 2023 Nov.21
 - Better **SDXL** Support
 
