@@ -43,7 +43,7 @@ def normalize_tensor(x, r):
 original_callback = KDiffusionSampler.callback_state
 
 def center_callback(self, d):
-    if not self.diffcg_enable:
+    if not self.diffcg_enable or getattr(self.p, 'image_mask', None) is not None:
         return original_callback(self, d)
 
     batchSize = d['x'].size(0)

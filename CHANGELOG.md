@@ -1,3 +1,6 @@
+### v0.2.2 - 2023 Nov.25
+- No longer process if a **Mask** exists
+
 ### v0.2.1 - 2023 Nov.23
 - Add **Effect Strength** Settings
 

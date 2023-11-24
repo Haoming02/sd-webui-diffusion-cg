@@ -9,6 +9,8 @@ producing a more **neutral** and **balanced**, but also **vibrant** and **contra
 
 > This is the fruition of the joint research between [TimothyAlexisVass](https://github.com/TimothyAlexisVass) with their findings, and me with my experience in developing [Vectorscope CC](https://github.com/Haoming02/sd-webui-vectorscope-cc)
 
+> Due to some weird interactions, this Extension will be disabled when a Mask is detected *(**ie.** Inpaint)*
+
 This Extension comes with two main features, **Recenter** and **Normalization**:
 
 ### Recenter
