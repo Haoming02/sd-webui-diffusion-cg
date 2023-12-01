@@ -1,3 +1,6 @@
+### v0.3.0 - 2023 Dec.01
+- Add **Default** Settings
+
 ### v0.2.3 - 2023 Dec.01
 - **Clarify** README
 

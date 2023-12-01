@@ -55,6 +55,17 @@ def center_callback(self, d):
 KDiffusionSampler.callback_state = center_callback
 
 
+# ["None", "txt2img", "img2img", "Both"]
+ac = getattr(shared.opts, 'always_center', 'None')
+an = getattr(shared.opts, 'always_normalize', 'None')
+def_sd = getattr(shared.opts, 'default_arch', '1.5')
+
+c_t2i = (ac == "txt2img" or ac == "Both")
+c_i2i = (ac == "img2img" or ac == "Both")
+n_t2i = (an == "txt2img" or an == "Both")
+n_i2i = (an == "img2img" or an == "Both")
+
+
 class DiffusionCG(scripts.Script):
 
     def title(self):
@@ -66,17 +77,23 @@ class DiffusionCG(scripts.Script):
     def ui(self, is_img2img):
         with gr.Accordion(f'Diffusion CG {VERSION}', open=False):
             with gr.Row():
-                enableG = gr.Checkbox(label="Enable (Global)")
-                sd_ver = gr.Radio(['1.5', 'XL'], value='1.5', label="Stable Diffusion Version")
+                enableG = gr.Checkbox(label="Enable (Global)", value=(((not is_img2img) and (c_t2i or n_t2i)) or (is_img2img and (c_i2i or n_i2i))))
+                sd_ver = gr.Radio(['1.5', 'XL'], value=def_sd, label="Stable Diffusion Version")
 
             with gr.Row():
                 with gr.Group():
                     gr.Markdown('<h3 align="center">Recenter</h3>')
-                    rc_str = gr.Slider(label="Effect Strength", minimum=0.0, maximum=1.0, step=0.2, value=0.0)
+
+                    if not is_img2img:
+                        v = 1.0 if c_t2i else 0.0
+                    else:
+                        v = 1.0 if c_i2i else 0.0
+
+                    rc_str = gr.Slider(label="Effect Strength", minimum=0.0, maximum=1.0, step=0.2, value=v)
 
                 with gr.Group():
                     gr.Markdown('<h3 align="center">Normalization</h3>')
-                    enableN = gr.Checkbox(label="Activate")
+                    enableN = gr.Checkbox(label="Activate", value=(((not is_img2img) and n_t2i) or (is_img2img and n_i2i)))
 
         return [enableG, sd_ver, rc_str, enableN]
 

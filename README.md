@@ -105,6 +105,10 @@ Nevertheless, you can now toggle the version to SDXL and try out the effects:
 <br><code>Off | On</code><br>
 </p>
 
+## Settings
+In the `Diffusion CG` section of the **Settings** tab, you can make either feature default to Enabled, 
+as well as setting the Stable Diffusion Version to start with.
+
 ## To Do
 - [ ] Parameter Settings
   - Though, I also want this to be a simple plug-and-use Extension
@@ -124,8 +128,8 @@ Nevertheless, you can now toggle the version to SDXL and try out the effects:
 
 ## Stable Diffusion Structures
 The `Tensor` of the latent noise has a dimention of `[batch, 4, height / 8, width / 8]`.
-- For **SD 1.5:** From my trial and error when developing [Vectorscope CC](https://github.com/Haoming02/sd-webui-vectorscope-cc), each of the 4 channels essentially represents the `-K`, `-M`, `C`, `Y` color for the **CMYK** colorspace.
-- For **SDXL:** According to <ins>TimothyAlexisVass</ins>'s [Blogpost](https://huggingface.co/blog/TimothyAlexisVass/explaining-the-sdxl-latent-space), the first 3 channels basically represent `L`, `-a`, `b` color for the **[Lab](https://en.wikipedia.org/wiki/CIELAB_color_space)** colorspace, while the 4th channel is the pattern/structure.
+- For **SD 1.5:** From my trial and error when developing [Vectorscope CC](https://github.com/Haoming02/sd-webui-vectorscope-cc), each of the 4 channels essentially represents the `-K`, `-M`, `C`, `Y` color for the **CMYK** color model.
+- For **SDXL:** According to <ins>TimothyAlexisVass</ins>'s [Blogpost](https://huggingface.co/blog/TimothyAlexisVass/explaining-the-sdxl-latent-space), the first 3 channels basically represent `L`, `-a`, `b` color for the **[Lab](https://en.wikipedia.org/wiki/CIELAB_color_space)** color model, while the 4th channel is the pattern/structure.
 
 <hr>
 
