@@ -1,8 +1,5 @@
 ﻿# SD Webui Diffusion Color Grading
-<h4 align = "right"><i>Alpha</i></h4>
-<p align="right">
-<sup><i>Experimental... Expect feature-breaking changes~</i></sup>
-</p>
+<h4 align = "right"><i>Beta</i></h4>
 
 This is an Extension for the [Automatic1111 Webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui), which performs *Color Grading* during the generation, 
 producing a more **neutral** and **balanced**, but also **vibrant** and **contrasty** color.
@@ -19,13 +16,15 @@ This Extension comes with two main features, **Recenter** and **Normalization**:
 <h5 align="center">Abstract</h5>
 
 <ins>TimothyAlexisVass</ins> discovered that, the value of the latent noise Tensor often starts off-centered, and the mean of each channel tends to drift away from `0`. 
-Therefore, I tried to write an Extension to guide the mean back to `0`. However after some trial and error, it was found out that pushing the mean of every channel to `0` often produces a green tint,
-suggesting that the "center" of each channel might not simply be the same at `0`. After experimenting with hundreds of images, with both Anime and Realistic **SD 1.5** checkpoints, 
-I have located a set of rather suitable values for a **neutral and balanced** tone.
+Therefore, I tried to write an Extension to guide the mean back to `0`. For **SDXL**, pushing the mean of each channel to `0` yields decent results.
+
+But for **SD 1.5**, I found out that this often produces a green tint, suggesting that the "center" of each channel might not simply be at `0`. 
+After experimenting with hundreds of images, with both Anime and Realistic checkpoints, 
+I located a rather suitable set of values for a **neutral and balanced** tone.
 
 <h5 align="center">Effects</h5>
 
-When you enable the feature, the output images will not have a biased color tint, and all colors will distribute evenly;
+When you enable the feature, the output images will not have a biased color tint, and all colors will distribute more evenly;
 Additionally, the brightness will be adjusted so that bright areas are not overblown and dark areas are not clipped, 
 producing a similar effect like the HDR photos taken by smartphones.
 
@@ -88,12 +87,12 @@ You can also enable both features at the same time, thus creating some really st
 > The above images were all generated using **SD 1.5** Checkpoints
 
 ### SDXL Support
-Since the internal structure (channel) and the color range of `SDXL` is different from those of `SD 1.5`, 
+Since the [*](#stable-diffusion-structures)internal structure (channel) and the color range of `SDXL` is different from those of `SD 1.5`, 
 this Extension cannot simply work for both of them using the same values. On top of that, I myself mainly use `SD 1.5` instead of `SDXL` *(as the latter is rather more time comsuming)*, 
 the support for `SDXL` will be comparatively more limited, for now. 
 
-Furthermore, the results generated with this Extension will **not** be exactly the same as the demo from <ins>TimothyAlexisVass</ins>, 
-because they wrote their own custom pipeline with direct accesses to the latent Tensors and VAE process, instead of using Automatc1111.
+Furthermore, the results generated with this Extension most likely won't be the same as the demo from <ins>TimothyAlexisVass</ins>, 
+because they wrote their own custom pipeline with direct accesses to the latent Tensors and VAE process, instead of using **Automatc1111**.
 
 Nevertheless, you can now toggle the version to SDXL and try out the effects:
 
@@ -108,19 +107,25 @@ Nevertheless, you can now toggle the version to SDXL and try out the effects:
 
 ## To Do
 - [ ] Parameter Settings
-  - Such as effect strength
-  - However, I also want this to be a simple plug-and-use Extension
-- [ ] Better SDXL Support
+  - Though, I also want this to be a simple plug-and-use Extension
+- [X] Better SDXL Support
 - [ ] Better Algorithms
   > Currently, for extreme cases *(**eg.** a bowl of oranges)*, the overall colors will be overcompensating
 - [ ] Generation InfoText
 
 <hr>
 
-**Checkpoints Used:**
+##### Checkpoints Used:
 - [UHD-23](https://civitai.com/models/22371/uhd-23)
 - [Realistic Vision V5.1](https://civitai.com/models/4201/realistic-vision-v51)
 - [SDXL Base 1.0 w/ 0.9 VAE](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/tree/main)
+
+<hr>
+
+## Stable Diffusion Structures
+The `Tensor` of the latent noise has a dimention of `[batch, 4, height / 8, width / 8]`.
+- For **SD 1.5:** From my trial and error when developing [Vectorscope CC](https://github.com/Haoming02/sd-webui-vectorscope-cc), each of the 4 channels essentially represents the `-K`, `-M`, `C`, `Y` color for the **CMYK** colorspace.
+- For **SDXL:** According to <ins>TimothyAlexisVass</ins>'s [Blogpost](https://huggingface.co/blog/TimothyAlexisVass/explaining-the-sdxl-latent-space), the first 3 channels basically represent `L`, `-a`, `b` color for the **[Lab](https://en.wikipedia.org/wiki/CIELAB_color_space)** colorspace, while the 4th channel is the pattern/structure.
 
 <hr>
 

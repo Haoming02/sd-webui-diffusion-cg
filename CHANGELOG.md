@@ -1,3 +1,6 @@
+### v0.2.3 - 2023 Dec.01
+- **Clarify** README
+
 ### v0.2.2 - 2023 Nov.25
 - No longer process if a **Mask** exists
 

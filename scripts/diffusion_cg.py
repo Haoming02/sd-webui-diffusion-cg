@@ -5,24 +5,17 @@ import modules.scripts as scripts
 from modules import shared
 import gradio as gr
 
-
-# luminance = 0.2126 * R + 0.7152 * G + 0.0722 * B
-# LUTS: [-K, -M, C, Y]
+# LUTS
+# 1.5: [-K, -M, C, Y]
+# XL:  [L, -a, b]
 
 LUTS = {
     '1.5': [0.0, -0.5152, 0.0126, -0.1278],
-    'XL': [-0.01, -0.01, 0.01, None]
+    'XL': [0.0, 0.0, 0.0, None]
 }
 
 
-# https://github.com/AUTOMATIC1111/stable-diffusion-webui/blob/master/configs/v1-inference.yaml#L17
-# (1.0 / 0.18215) / 2 = 2.74499039253
-# (1.0 / 0.13025) / 2 = 3.83877159309
-
-DYNAMIC_RANGE = {
-    'Default': [3.2, 2.5, 2.5, 2.5],
-    'Maximize (noisy)': [3.839, 2.745, 2.745, 2.745]
-}
+DYNAMIC_RANGE = [3.25, 2.5, 2.5, 2.5]
 
 
 def normalize_tensor(x, r):
@@ -34,8 +27,7 @@ def normalize_tensor(x, r):
 
     ratio = r / float(x.max())
 
-    if ratio > 0.95:
-        x *= ratio
+    x *= max(ratio, 0.95)
 
     return x + delta
 
@@ -56,7 +48,7 @@ def center_callback(self, d):
                 d['x'][b][i] += (LUTS[self.diffcg_arch][i] - d['x'][b][i].mean()) * self.diffcg_recenter_strength
 
             if self.diffcg_normalize and (d['i'] + 1) >= self.diffcg_last_step - 1:
-                d[self.diffcg_tensor][b][i] = normalize_tensor(d[self.diffcg_tensor][b][i], DYNAMIC_RANGE[self.diffcg_normalize_strength][i])
+                d[self.diffcg_tensor][b][i] = normalize_tensor(d[self.diffcg_tensor][b][i], DYNAMIC_RANGE[i])
 
     return original_callback(self, d)
 
@@ -84,21 +76,20 @@ class DiffusionCG(scripts.Script):
 
                 with gr.Group():
                     gr.Markdown('<h3 align="center">Normalization</h3>')
-                    n_str = gr.Radio(['None', 'Default', 'Maximize (noisy)'], value='None', label="Effect Strength")
+                    enableN = gr.Checkbox(label="Activate")
 
-        return [enableG, sd_ver, rc_str, n_str]
+        return [enableG, sd_ver, rc_str, enableN]
 
     def before_hr(self, p, *args):
         KDiffusionSampler.diffcg_normalize = False
 
-    def process(self, p, enableG:bool, sd_ver:str, rc_str:float, n_str:str):
+    def process(self, p, enableG:bool, sd_ver:str, rc_str:float, enableN:bool):
         KDiffusionSampler.diffcg_enable = enableG
         KDiffusionSampler.diffcg_arch = sd_ver
 
         KDiffusionSampler.diffcg_recenter = rc_str > 0.0
-        KDiffusionSampler.diffcg_normalize = n_str != 'None'
+        KDiffusionSampler.diffcg_normalize = enableN
         KDiffusionSampler.diffcg_recenter_strength = rc_str
-        KDiffusionSampler.diffcg_normalize_strength = n_str
 
         KDiffusionSampler.diffcg_tensor = 'x' if p.sampler_name.strip() == 'Euler' else 'denoised'
 
