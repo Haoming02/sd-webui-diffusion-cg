@@ -16,16 +16,16 @@ Debug_Folders = []
 LABEL = ['dimgrey', 'lime', 'cyan', 'gold']
 
 def debug_callback(self, d):
-    if not hasattr(shared.opts, 'tensor_debug') or shared.opts.tensor_debug is not True:
+    if not getattr(shared.opts, 'tensor_debug', False):
         return original_callback(self, d)
-
-    output_folder = os.path.join(self.p.outpath_samples, 'debug')
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
 
     global CH
     global Steps
     global Debug_Folders
+
+    output_folder = os.path.join(self.p.outpath_samples, 'debug')
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
 
     if output_folder not in Debug_Folders:
         Debug_Folders.append(output_folder)

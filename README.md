@@ -11,16 +11,16 @@ producing a more **neutral** and **balanced**, but also **vibrant** and **contra
 This Extension comes with two main features, **Recenter** and **Normalization**:
 
 ### Recenter
-<p align="right"><sup><i>*The "improvement" is realistically subjective</i></sup></p>
+<p align="right"><sup><i>*The "improvement" is pretty subjective</i></sup></p>
 
 <h5 align="center">Abstract</h5>
 
 <ins>TimothyAlexisVass</ins> discovered that, the value of the latent noise Tensor often starts off-centered, and the mean of each channel tends to drift away from `0`. 
 Therefore, I tried to write an Extension to guide the mean back to `0`. For **SDXL**, pushing the mean of each channel to `0` yields decent results.
 
-But for **SD 1.5**, I found out that this often produces a green tint, suggesting that the "center" of each channel might not simply be at `0`. 
-After experimenting with hundreds of images, with both Anime and Realistic checkpoints, 
-I located a rather suitable set of values for a **neutral and balanced** tone.
+But for **SD 1.5**, I found out that for some Checkpoints this often produces a green tint, suggesting that the "center" of each channel might not necessarily be at `0`. 
+After experimenting with hundreds of images, I located a set of values for a rather **neutral and balanced** tone.
+> If you think the result is too "red" instead, lower the **M** channel
 
 <h5 align="center">Effects</h5>
 
@@ -110,8 +110,7 @@ In the `Diffusion CG` section of the **Settings** tab, you can make either featu
 as well as setting the Stable Diffusion Version to start with.
 
 ## To Do
-- [ ] Parameter Settings
-  - Though, I also want this to be a simple plug-and-use Extension
+- [X] Parameter Settings
 - [X] Better SDXL Support
 - [ ] Better Algorithms
   > Currently, for extreme cases *(**eg.** a bowl of oranges)*, the overall colors will be overcompensating

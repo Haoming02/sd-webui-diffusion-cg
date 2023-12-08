@@ -1,3 +1,6 @@
+### v0.4.0 - 2023 Dec.08
+- Implement Color **Parameters**
+
 ### v0.3.0 - 2023 Dec.01
 - Add **Default** Settings
 

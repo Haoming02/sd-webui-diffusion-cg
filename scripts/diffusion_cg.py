@@ -5,28 +5,25 @@ import modules.scripts as scripts
 from modules import shared
 import gradio as gr
 
-# LUTS
-# 1.5: [-K, -M, C, Y]
-# XL:  [L, -a, b]
-
-LUTS = {
-    '1.5': [0.0, -0.5152, 0.0126, -0.1278],
-    'XL': [0.0, 0.0, 0.0, None]
-}
-
 
 DYNAMIC_RANGE = [3.25, 2.5, 2.5, 2.5]
 
+Default_LUTs = {
+    'C': 0.01,
+    'M': 0.5,
+    'Y': -0.13,
+    'K': 0
+}
+
 
 def normalize_tensor(x, r):
+    delta = x.mean()
+    x -= delta
+
     x_min = abs(float(x.min()))
     x_max = abs(float(x.max()))
 
-    delta = (x_max - x_min) / 2.0
-    x -= delta
-
-    ratio = r / float(x.max())
-
+    ratio = r / max(x_min, x_max)
     x *= max(ratio, 0.95)
 
     return x + delta
@@ -39,16 +36,16 @@ def center_callback(self, d):
         return original_callback(self, d)
 
     batchSize = d['x'].size(0)
-    channels = 4 if self.diffcg_arch == '1.5' else 3
+    channels = len(self.LUTs)
 
     for b in range(batchSize):
-        for i in range(channels):
+        for c in range(channels):
 
             if self.diffcg_recenter:
-                d['x'][b][i] += (LUTS[self.diffcg_arch][i] - d['x'][b][i].mean()) * self.diffcg_recenter_strength
+                d['x'][b][c] += (self.LUTs[c] - d['x'][b][c].mean()) * self.diffcg_recenter_strength
 
             if self.diffcg_normalize and (d['i'] + 1) >= self.diffcg_last_step - 1:
-                d[self.diffcg_tensor][b][i] = normalize_tensor(d[self.diffcg_tensor][b][i], DYNAMIC_RANGE[i])
+                d[self.diffcg_tensor][b][c] = normalize_tensor(d[self.diffcg_tensor][b][c], DYNAMIC_RANGE[c])
 
     return original_callback(self, d)
 
@@ -95,14 +92,38 @@ class DiffusionCG(scripts.Script):
                     gr.Markdown('<h3 align="center">Normalization</h3>')
                     enableN = gr.Checkbox(label="Activate", value=(((not is_img2img) and n_t2i) or (is_img2img and n_i2i)))
 
-        return [enableG, sd_ver, rc_str, enableN]
+            with gr.Accordion('Recenter Settings', open=False):
+                with gr.Group(visible=(def_sd=='1.5')) as setting15:
+                    C = gr.Slider(label="C", minimum=-1.00, maximum=1.00, step=0.01, value=Default_LUTs['C'])
+                    M = gr.Slider(label="M", minimum=-1.00, maximum=1.00, step=0.01, value=Default_LUTs['M'])
+                    Y = gr.Slider(label="Y", minimum=-1.00, maximum=1.00, step=0.01, value=Default_LUTs['Y'])
+                    K = gr.Slider(label="K", minimum=-1.00, maximum=1.00, step=0.01, value=Default_LUTs['K'])
+
+                with gr.Group(visible=(def_sd=='XL')) as settingXL:
+                    L = gr.Slider(label="L", minimum=-1.00, maximum=1.00, step=0.01, value=0.0)
+                    a = gr.Slider(label="a", minimum=-1.00, maximum=1.00, step=0.01, value=0.0)
+                    b = gr.Slider(label="b", minimum=-1.00, maximum=1.00, step=0.01, value=0.0)
+
+            def on_radio_change(choice):
+                if choice != "1.5":
+                    return [gr.Group.update(visible=True), gr.Group.update(visible=False)]
+                else:
+                    return [gr.Group.update(visible=False), gr.Group.update(visible=True)]
+
+            sd_ver.select(on_radio_change, sd_ver, [setting15, settingXL])
+
+        return [enableG, sd_ver, rc_str, enableN, C, M, Y, K, L, a, b]
 
     def before_hr(self, p, *args):
         KDiffusionSampler.diffcg_normalize = False
 
-    def process(self, p, enableG:bool, sd_ver:str, rc_str:float, enableN:bool):
+    def process(self, p, enableG:bool, sd_ver:str, rc_str:float, enableN:bool, C, M, Y, K, L, a, b):
         KDiffusionSampler.diffcg_enable = enableG
-        KDiffusionSampler.diffcg_arch = sd_ver
+
+        if sd_ver == '1.5':
+            KDiffusionSampler.LUTs = [-K, -M, C, Y]
+        else:
+            KDiffusionSampler.LUTs = [L, -a, b]
 
         KDiffusionSampler.diffcg_recenter = rc_str > 0.0
         KDiffusionSampler.diffcg_normalize = enableN
