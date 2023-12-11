@@ -1,3 +1,6 @@
+### v0.4.1 - 2023 Dec.11
+- Update **Normalization** Logic
+
 ### v0.4.0 - 2023 Dec.08
 - Implement Color **Parameters**
 

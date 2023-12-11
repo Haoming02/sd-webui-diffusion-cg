@@ -17,16 +17,10 @@ Default_LUTs = {
 
 
 def normalize_tensor(x, r):
-    delta = x.mean()
-    x -= delta
+    ratio = r / max(abs(float(x.min())), abs(float(x.max())))
+    x *= max(ratio, 0.99)
 
-    x_min = abs(float(x.min()))
-    x_max = abs(float(x.max()))
-
-    ratio = r / max(x_min, x_max)
-    x *= max(ratio, 0.95)
-
-    return x + delta
+    return x
 
 
 original_callback = KDiffusionSampler.callback_state
