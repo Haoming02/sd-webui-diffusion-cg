@@ -17,10 +17,12 @@ Default_LUTs = {
 
 
 def normalize_tensor(x, r):
-    ratio = r / max(abs(float(x.min())), abs(float(x.max())))
-    x *= max(ratio, 0.99)
+    X = x.detach().clone()
 
-    return x
+    ratio = r / max(abs(float(X.min())), abs(float(X.max())))
+    X *= max(ratio, 0.99)
+
+    return X
 
 
 original_callback = KDiffusionSampler.callback_state
@@ -32,14 +34,17 @@ def center_callback(self, d):
     batchSize = d['x'].size(0)
     channels = len(self.LUTs)
 
+    X = d['x'].detach().clone()
+    Y = d[self.diffcg_tensor].detach().clone()
+
     for b in range(batchSize):
         for c in range(channels):
 
-            if self.diffcg_recenter:
-                d['x'][b][c] += (self.LUTs[c] - d['x'][b][c].mean()) * self.diffcg_recenter_strength
+            if self.diffcg_recenter_strength > 0.0:
+                d['x'][b][c] += (self.LUTs[c] - X[b][c].mean()) * self.diffcg_recenter_strength
 
             if self.diffcg_normalize and (d['i'] + 1) >= self.diffcg_last_step - 1:
-                d[self.diffcg_tensor][b][c] = normalize_tensor(d[self.diffcg_tensor][b][c], DYNAMIC_RANGE[c])
+                d[self.diffcg_tensor][b][c] = normalize_tensor(Y[b][c], DYNAMIC_RANGE[c])
 
     return original_callback(self, d)
 
@@ -119,9 +124,8 @@ class DiffusionCG(scripts.Script):
         else:
             KDiffusionSampler.LUTs = [L, -a, b]
 
-        KDiffusionSampler.diffcg_recenter = rc_str > 0.0
-        KDiffusionSampler.diffcg_normalize = enableN
         KDiffusionSampler.diffcg_recenter_strength = rc_str
+        KDiffusionSampler.diffcg_normalize = enableN
 
         KDiffusionSampler.diffcg_tensor = 'x' if p.sampler_name.strip() == 'Euler' else 'denoised'
 

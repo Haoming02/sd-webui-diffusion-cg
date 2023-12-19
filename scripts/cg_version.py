@@ -3,7 +3,7 @@ import modules.scripts as scripts
 import json
 import os
 
-VERSION = 'v0.4.1'
+VERSION = 'v0.4.2'
 
 def clean_outdated(EXT_NAME:str):
     with open(os.path.join(scripts.basedir(), 'ui-config.json'), 'r', encoding='utf8') as json_file:

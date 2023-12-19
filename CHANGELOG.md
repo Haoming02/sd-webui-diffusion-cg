@@ -1,3 +1,6 @@
+### v0.4.2 - 2023 Dec.19
+- Optimization via `.detach()`
+
 ### v0.4.1 - 2023 Dec.11
 - Update **Normalization** Logic
 
