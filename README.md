@@ -112,9 +112,9 @@ as well as setting the Stable Diffusion Version to start with.
 ## To Do
 - [X] Parameter Settings
 - [X] Better SDXL Support
+- [X] Generation InfoText
 - [ ] Better Algorithms
   > Currently, for extreme cases *(**eg.** a bowl of oranges)*, the overall colors will be overcompensating
-- [ ] Generation InfoText
 
 <hr>
 

@@ -1,3 +1,6 @@
+### v0.5.0 - 2024 Jan.09
+- Add **Infotext**
+
 ### v0.4.2 - 2023 Dec.19
 - Optimization via `.detach()`
 

@@ -55,6 +55,7 @@ KDiffusionSampler.callback_state = center_callback
 ac = getattr(shared.opts, 'always_center', 'None')
 an = getattr(shared.opts, 'always_normalize', 'None')
 def_sd = getattr(shared.opts, 'default_arch', '1.5')
+adv_opt = getattr(shared.opts, 'show_center_opt', False)
 
 c_t2i = (ac == "txt2img" or ac == "Both")
 c_i2i = (ac == "img2img" or ac == "Both")
@@ -91,7 +92,7 @@ class DiffusionCG(scripts.Script):
                     gr.Markdown('<h3 align="center">Normalization</h3>')
                     enableN = gr.Checkbox(label="Activate", value=(((not is_img2img) and n_t2i) or (is_img2img and n_i2i)))
 
-            with gr.Accordion('Recenter Settings', open=False):
+            with gr.Accordion('Recenter Settings', visible=adv_opt, open=False):
                 with gr.Group(visible=(def_sd=='1.5')) as setting15:
                     C = gr.Slider(label="C", minimum=-1.00, maximum=1.00, step=0.01, value=Default_LUTs['C'])
                     M = gr.Slider(label="M", minimum=-1.00, maximum=1.00, step=0.01, value=Default_LUTs['M'])
@@ -104,12 +105,44 @@ class DiffusionCG(scripts.Script):
                     b = gr.Slider(label="b", minimum=-1.00, maximum=1.00, step=0.01, value=0.0)
 
             def on_radio_change(choice):
-                if choice != "1.5":
+                if choice == "1.5":
                     return [gr.Group.update(visible=True), gr.Group.update(visible=False)]
                 else:
                     return [gr.Group.update(visible=False), gr.Group.update(visible=True)]
 
-            sd_ver.select(on_radio_change, sd_ver, [setting15, settingXL])
+            sd_ver.change(on_radio_change, sd_ver, [setting15, settingXL])
+
+
+        self.paste_field_names = [
+            (rc_str, "ReCenter Str"),
+            (enableN, "Normalization"),
+            (sd_ver, "SD_ver")
+        ]
+        self.infotext_fields = [
+            (rc_str, "ReCenter Str"),
+            (enableN, "Normalization"),
+            (sd_ver, "SD_ver")
+        ]
+
+        if adv_opt:
+            self.paste_field_names += [
+                (C, lambda d: float(d["LUTs"].strip('[]').split(',')[0]) if len(d.get("LUTs", '').split(',')) == 4 else gr.update()),
+                (M, lambda d: float(d["LUTs"].strip('[]').split(',')[1]) if len(d.get("LUTs", '').split(',')) == 4 else gr.update()),
+                (Y, lambda d: float(d["LUTs"].strip('[]').split(',')[2]) if len(d.get("LUTs", '').split(',')) == 4 else gr.update()),
+                (K, lambda d: float(d["LUTs"].strip('[]').split(',')[3]) if len(d.get("LUTs", '').split(',')) == 4 else gr.update()),
+                (L, lambda d: float(d["LUTs"].strip('[]').split(',')[0]) if len(d.get("LUTs", '').split(',')) == 3 else gr.update()),
+                (a, lambda d: float(d["LUTs"].strip('[]').split(',')[1]) if len(d.get("LUTs", '').split(',')) == 3 else gr.update()),
+                (b, lambda d: float(d["LUTs"].strip('[]').split(',')[2]) if len(d.get("LUTs", '').split(',')) == 3 else gr.update()),
+            ]
+            self.infotext_fields += [
+                (C, lambda d: float(d["LUTs"].strip('[]').split(',')[0]) if len(d.get("LUTs", '').split(',')) == 4 else gr.update()),
+                (M, lambda d: float(d["LUTs"].strip('[]').split(',')[1]) if len(d.get("LUTs", '').split(',')) == 4 else gr.update()),
+                (Y, lambda d: float(d["LUTs"].strip('[]').split(',')[2]) if len(d.get("LUTs", '').split(',')) == 4 else gr.update()),
+                (K, lambda d: float(d["LUTs"].strip('[]').split(',')[3]) if len(d.get("LUTs", '').split(',')) == 4 else gr.update()),
+                (L, lambda d: float(d["LUTs"].strip('[]').split(',')[0]) if len(d.get("LUTs", '').split(',')) == 3 else gr.update()),
+                (a, lambda d: float(d["LUTs"].strip('[]').split(',')[1]) if len(d.get("LUTs", '').split(',')) == 3 else gr.update()),
+                (b, lambda d: float(d["LUTs"].strip('[]').split(',')[2]) if len(d.get("LUTs", '').split(',')) == 3 else gr.update()),
+            ]
 
         return [enableG, sd_ver, rc_str, enableN, C, M, Y, K, L, a, b]
 
@@ -118,6 +151,8 @@ class DiffusionCG(scripts.Script):
 
     def process(self, p, enableG:bool, sd_ver:str, rc_str:float, enableN:bool, C, M, Y, K, L, a, b):
         KDiffusionSampler.diffcg_enable = enableG
+        if not enableG:
+            return p
 
         if sd_ver == '1.5':
             KDiffusionSampler.LUTs = [-K, -M, C, Y]
@@ -133,6 +168,19 @@ class DiffusionCG(scripts.Script):
             KDiffusionSampler.diffcg_last_step = int(p.steps * p.denoising_strength) + 1
         else:
             KDiffusionSampler.diffcg_last_step = p.steps
+
+
+        p.extra_generation_params.update({
+            'ReCenter Str': rc_str,
+            'Normalization': enableN,
+            'SD_ver': sd_ver,
+        })
+
+        if adv_opt:
+            if def_sd == '1.5':
+                p.extra_generation_params['LUTs'] = f'[{C}, {M}, {Y}, {K}]'
+            else:
+                p.extra_generation_params['LUTs'] = f'[{L}, {a}, {b}]'
 
 
 def restore_callback():
