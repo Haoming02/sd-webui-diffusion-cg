@@ -31,14 +31,14 @@ producing a similar effect like the HDR photos taken by smartphones.
 <h5 align="center">Samples</h5>
 
 <p align="center">
-<img src="samples\c_a_off.jpg" width=256>
-<img src="samples\c_a_on.jpg" width=256>
+<img src="samples\.c_a_off.jpg" width=256>
+<img src="samples\.c_a_on.jpg" width=256>
 <br><code>Off | On</code><br>
 </p>
 
 <p align="center">
-<img src="samples\c_r_off.jpg" width=256>
-<img src="samples\c_r_on.jpg" width=256>
+<img src="samples\.c_r_off.jpg" width=256>
+<img src="samples\.c_r_on.jpg" width=256>
 <br><code>Off | On</code><br>
 </p>
 
@@ -63,14 +63,14 @@ As a result, bright areas will get brighter and dark areas will get darker; Addi
 <h5 align="center">Samples</h5>
 
 <p align="center">
-<img src="samples\n_a_off.jpg" width=256>
-<img src="samples\n_a_on.jpg" width=256>
+<img src="samples\.n_a_off.jpg" width=256>
+<img src="samples\.n_a_on.jpg" width=256>
 <br><code>Off | On</code><br>
 </p>
 
 <p align="center">
-<img src="samples\n_r_off.jpg" width=256>
-<img src="samples\n_r_on.jpg" width=256>
+<img src="samples\.n_r_off.jpg" width=256>
+<img src="samples\.n_r_on.jpg" width=256>
 <br><code>Off | On</code><br>
 </p>
 
@@ -79,9 +79,9 @@ As a result, bright areas will get brighter and dark areas will get darker; Addi
 You can also enable both features at the same time, thus creating some really stunning results!
 
 <p align="center">
-<img src="samples\cn_a_1.jpg" width=512>
+<img src="samples\.cn_a_1.jpg" width=512>
 <br>
-<img src="samples\cn_a_2.jpg" width=512>
+<img src="samples\.cn_a_2.jpg" width=512>
 </p>
 
 > The above images were all generated using **SD 1.5** Checkpoints
@@ -97,11 +97,11 @@ because they wrote their own custom pipeline with direct accesses to the latent 
 Nevertheless, you can now toggle the version to SDXL and try out the effects:
 
 <p align="center">
-<img src="samples\cn_xl_off_1.jpg" width=384>
-<img src="samples\cn_xl_on_1.jpg" width=384>
+<img src="samples\.cn_xl_off_1.jpg" width=384>
+<img src="samples\.cn_xl_on_1.jpg" width=384>
 <br>
-<img src="samples\cn_xl_off_2.jpg" width=384>
-<img src="samples\cn_xl_on_2.jpg" width=384>
+<img src="samples\.cn_xl_off_2.jpg" width=384>
+<img src="samples\.cn_xl_on_2.jpg" width=384>
 <br><code>Off | On</code><br>
 </p>
 
