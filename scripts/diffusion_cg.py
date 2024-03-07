@@ -1,10 +1,8 @@
 from modules.sd_samplers_kdiffusion import KDiffusionSampler
-from scripts.cg_version import VERSION
-from modules import script_callbacks
-import modules.scripts as scripts
-from modules import shared
+from modules import shared, scripts, script_callbacks
 import gradio as gr
 
+VERSION = 'v1.0.0'
 
 DYNAMIC_RANGE = [3.25, 2.5, 2.5, 2.5]
 
@@ -28,23 +26,21 @@ def normalize_tensor(x, r):
 original_callback = KDiffusionSampler.callback_state
 
 def center_callback(self, d):
-    if not self.diffcg_enable or getattr(self.p, 'image_mask', None) is not None:
+    if not self.diffcg_enable or getattr(self.p, "_ad_inner", False):
         return original_callback(self, d)
 
-    batchSize = d['x'].size(0)
+    X = d['denoised'].detach().clone()
+    batchSize = X.size(0)
     channels = len(self.LUTs)
-
-    X = d['x'].detach().clone()
-    Y = d[self.diffcg_tensor].detach().clone()
 
     for b in range(batchSize):
         for c in range(channels):
 
             if self.diffcg_recenter_strength > 0.0:
-                d['x'][b][c] += (self.LUTs[c] - X[b][c].mean()) * self.diffcg_recenter_strength
+                d['denoised'][b][c] += (self.LUTs[c] - X[b][c].mean()) * self.diffcg_recenter_strength
 
-            if self.diffcg_normalize and (d['i'] + 1) >= self.diffcg_last_step - 1:
-                d[self.diffcg_tensor][b][c] = normalize_tensor(Y[b][c], DYNAMIC_RANGE[c])
+            if self.diffcg_normalize and (d['i'] + 1) == self.diffcg_last_step:
+                d['denoised'][b][c] = normalize_tensor(X[b][c], DYNAMIC_RANGE[c])
 
     return original_callback(self, d)
 
@@ -57,10 +53,10 @@ an = getattr(shared.opts, 'always_normalize', 'None')
 def_sd = getattr(shared.opts, 'default_arch', '1.5')
 adv_opt = getattr(shared.opts, 'show_center_opt', False)
 
-c_t2i = (ac == "txt2img" or ac == "Both")
-c_i2i = (ac == "img2img" or ac == "Both")
-n_t2i = (an == "txt2img" or an == "Both")
-n_i2i = (an == "img2img" or an == "Both")
+c_t2i = ac in ("txt2img", "Both")
+c_i2i = ac in ("img2img", "Both")
+n_t2i = an in ("txt2img", "Both")
+n_i2i = an in ("img2img", "Both")
 
 
 class DiffusionCG(scripts.Script):
@@ -144,12 +140,19 @@ class DiffusionCG(scripts.Script):
                 (b, lambda d: float(d["LUTs"].strip('[]').split(',')[2]) if len(d.get("LUTs", '').split(',')) == 3 else gr.update()),
             ]
 
+        for comp in [enableG, sd_ver, rc_str, enableN, C, M, Y, K, L, a, b]:
+            comp.do_not_save_to_config = True
+
         return [enableG, sd_ver, rc_str, enableN, C, M, Y, K, L, a, b]
 
     def before_hr(self, p, *args):
         KDiffusionSampler.diffcg_normalize = False
 
-    def process(self, p, enableG:bool, sd_ver:str, rc_str:float, enableN:bool, C, M, Y, K, L, a, b):
+    def process(
+            self, p, enableG:bool, sd_ver:str, rc_str:float, enableN:bool,
+            C: float, M: float, Y: float, K: float, L: float, a: float, b: float
+        ):
+
         KDiffusionSampler.diffcg_enable = enableG
         if not enableG:
             return p
@@ -162,13 +165,10 @@ class DiffusionCG(scripts.Script):
         KDiffusionSampler.diffcg_recenter_strength = rc_str
         KDiffusionSampler.diffcg_normalize = enableN
 
-        KDiffusionSampler.diffcg_tensor = 'x' if p.sampler_name.strip() == 'Euler' else 'denoised'
-
-        if not hasattr(p, 'enable_hr') and hasattr(p, 'denoising_strength') and not shared.opts.img2img_fix_steps and p.denoising_strength < 1.0:
+        if not hasattr(p, 'enable_hr') and not shared.opts.img2img_fix_steps and getattr(p, 'denoising_strength', 1.0) < 1.0:
             KDiffusionSampler.diffcg_last_step = int(p.steps * p.denoising_strength) + 1
         else:
             KDiffusionSampler.diffcg_last_step = p.steps
-
 
         p.extra_generation_params.update({
             'ReCenter Str': rc_str,

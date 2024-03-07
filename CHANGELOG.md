@@ -1,3 +1,6 @@
+### v1.0.0 - 2024 Mar.07
+- Extension "**Released**"
+
 ### v0.5.0 - 2024 Jan.09
 - Add **Infotext**
 
