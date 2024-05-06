@@ -1,3 +1,6 @@
+### v1.1.0 - 2024 May.06
+- Add **X/Y/Z Plot** Support
+
 ### v1.0.0 - 2024 Mar.07
 - Extension "**Released**"
 
@@ -30,7 +33,7 @@
 
 ### v0.1.3 - 2023 Nov.20
 - Improved **Compatibility**
-- 
+-
 ### v0.1.2 - 2023 Nov.20
 - Improved(?) **Normalization**
 

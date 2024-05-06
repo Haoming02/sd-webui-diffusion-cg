@@ -2,7 +2,9 @@ from modules.sd_samplers_kdiffusion import KDiffusionSampler
 from modules import shared, scripts, script_callbacks
 import gradio as gr
 
-VERSION = "v1.0.1"
+from scripts.cg_xyz import xyz_support
+
+VERSION = "v1.1.0"
 
 DYNAMIC_RANGE = [3.25, 2.5, 2.5, 2.5]
 
@@ -37,9 +39,7 @@ def center_callback(self, d):
                     self.LUTs[c] - X[b][c].mean()
                 ) * self.diffcg_recenter_strength
 
-            print(d["denoised"][b][c].min(), d["denoised"][b][c].max())
-
-            if self.diffcg_normalize and (d["i"] + 1) == self.diffcg_last_step:
+            if self.diffcg_normalize and (d["i"] + 1) > self.diffcg_last_step // 2:
                 d["denoised"][b][c] = normalize_tensor(X[b][c], DYNAMIC_RANGE[c])
 
     return original_callback(self, d)
@@ -61,6 +61,9 @@ n_i2i = an in ("img2img", "Both")
 
 
 class DiffusionCG(scripts.Script):
+    def __init__(self):
+        self.xyzCache = {}
+        xyz_support(self.xyzCache)
 
     def title(self):
         return "DiffusionCG"
@@ -315,9 +318,30 @@ class DiffusionCG(scripts.Script):
         b: float,
     ):
 
+        if "enableG" in self.xyzCache.keys():
+            enableG = self.xyzCache["enableG"].lower().strip() == "true"
+            del self.xyzCache["enableG"]
+
         KDiffusionSampler.diffcg_enable = enableG
         if not enableG:
+            if len(self.xyzCache.keys()) > 0:
+                print("\n[Diff. CG] X [X/Y/Z Plot] Extension is not Enabled!\n")
+            self.xyzCache.clear()
             return p
+
+        if "rc_str" in self.xyzCache.keys():
+            rc_str = float(self.xyzCache["rc_str"])
+        if "enableN" in self.xyzCache.keys():
+            enableN = self.xyzCache["enableN"].lower().strip() == "true"
+
+        if adv_opt:
+            C = self.xyzCache.get("C", C)
+            M = self.xyzCache.get("M", M)
+            Y = self.xyzCache.get("Y", Y)
+            K = self.xyzCache.get("K", K)
+            L = self.xyzCache.get("L", L)
+            a = self.xyzCache.get("a", a)
+            b = self.xyzCache.get("b", b)
 
         if sd_ver == "1.5":
             KDiffusionSampler.LUTs = [-K, -M, C, Y]
@@ -349,6 +373,8 @@ class DiffusionCG(scripts.Script):
                 p.extra_generation_params["LUTs"] = f"[{C}, {M}, {Y}, {K}]"
             else:
                 p.extra_generation_params["LUTs"] = f"[{L}, {a}, {b}]"
+
+        self.xyzCache.clear()
 
 
 def restore_callback():
