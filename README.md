@@ -1,5 +1,5 @@
 ﻿# SD Webui Diffusion Color Grading
-This is an Extension for the [Automatic1111 Webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui), which performs *Color Grading* during the generation, 
+This is an Extension for the [Automatic1111 Webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui), which performs *Color Grading* during the generation,
 producing a more **neutral** and **balanced**, but also **vibrant** and **contrasty** color.
 
 > This is the fruition of the joint research between [TimothyAlexisVass](https://github.com/TimothyAlexisVass) with their findings, and me with my experience in developing [Vectorscope CC](https://github.com/Haoming02/sd-webui-vectorscope-cc)
@@ -9,20 +9,19 @@ producing a more **neutral** and **balanced**, but also **vibrant** and **contra
 This Extension comes with two main features, **Recenter** and **Normalization**:
 
 ### Recenter
-<p align="right"><sup><i>*The "improvement" is pretty subjective</i></sup></p>
 
 <h5 align="center">Abstract</h5>
 
-<ins>TimothyAlexisVass</ins> discovered that, the value of the latent noise Tensor often starts off-centered, and the mean of each channel tends to drift away from `0`. 
+<ins>TimothyAlexisVass</ins> discovered that, the value of the latent noise Tensor often starts off-centered, and the mean of each channel tends to drift away from `0`.
 Therefore, I tried to write an Extension to guide the mean back to `0`. For **SDXL**, pushing the mean of each channel to `0` yields decent results.
 
-But for **SD 1.5**, I found out that for some Checkpoints this often produces a green tint, suggesting that the "center" of each channel might not necessarily be at `0`. 
+But for **SD 1.5**, I found out that for some Checkpoints this often produces a green tint, suggesting that the "center" of each channel might not necessarily be at `0`.
 After experimenting with hundreds of images, I located a set of values for a rather **neutral and balanced** tone.
 
 <h5 align="center">Effects</h5>
 
 When you enable the feature, the output images will not have a biased color tint, and all colors will distribute more evenly;
-Additionally, the brightness will be adjusted so that bright areas are not overblown and dark areas are not clipped, 
+Additionally, the brightness will be adjusted so that bright areas are not overblown and dark areas are not clipped,
 producing a similar effect like the HDR photos taken by smartphones.
 
 <h5 align="center">Samples</h5>
@@ -40,18 +39,17 @@ producing a similar effect like the HDR photos taken by smartphones.
 </p>
 
 ### Normalization
-<p align="right"><sup><i>*Works better when <b>Recenter</b> is also on</i></sup></p>
 
 <h5 align="center">Abstract</h5>
 
-By encoding images into latent noise with VAE, <ins>TimothyAlexisVass</ins> discovered that the values for VAE to decode are usually within a certain range, 
-and thus theorized that if the final latent noise has a smaller value range, then some precision is essentailly wasted. 
+By encoding images into latent noise with VAE, <ins>TimothyAlexisVass</ins> discovered that the values for VAE to decode are usually within a certain range,
+and thus theorized that if the final latent noise has a smaller value range, then some precision is essentailly wasted.
 This gave me an idea to write a function that can make the latent noise utilize the full color depth,
 making the final output more **vibrant** and **contrasty**.
 
 <h5 align="center">Effects</h5>
 
-When you enable the feature, the latent noise will attempt to span across the value ranges if possible, before getting decoded by the VAE. 
+When you enable the feature, the latent noise will attempt to span across the value ranges if possible, before getting decoded by the VAE.
 As a result, bright areas will get brighter and dark areas will get darker; Additional details may also be introduced in these areas.
 
 > This feature is currently disabled during Hires. fix pass
@@ -64,7 +62,7 @@ You can also enable both features at the same time, thus creating some really st
 </p>
 
 ### SDXL Support
-Since the [*](#stable-diffusion-structures)internal structure (channel) and the color range of `SDXL` is different from those of `SD 1.5`, 
+Since the [*](#stable-diffusion-structures)internal structure (channel) and the color range of `SDXL` is different from those of `SD 1.5`,
 this Extension cannot simply work for both of them using the same values. Nevertheless, you can now toggle the version to SDXL and try out the effects:
 
 <p align="center">
@@ -77,7 +75,7 @@ this Extension cannot simply work for both of them using the same values. Nevert
 </p>
 
 ## Settings
-In the `Diffusion CG` section of the **Settings** tab, you can make either feature default to Enabled, 
+In the `Diffusion CG` section of the **Settings** tab, you can make either feature default to Enabled,
 as well as setting the Stable Diffusion Version to start with.
 
 ## To Do
