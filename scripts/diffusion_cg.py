@@ -1,23 +1,24 @@
 from modules.sd_samplers_kdiffusion import KDiffusionSampler
-from modules import shared, scripts, script_callbacks
+from modules.script_callbacks import on_script_unloaded
+from modules.ui_components import InputAccordion
+from modules import scripts
+
 from functools import wraps
 import gradio as gr
 import torch
 
-from scripts.cg_xyz import xyz_support
+from lib_cg import SCALE_FACTOR, c_t2i, c_i2i, n_t2i, n_i2i, default_sd
+from lib_cg.params import DiffusionCGParams
+from lib_cg.adv import advanced_settings
+from lib_cg.xyz import xyz_support
 
-VERSION = "1.1.1"
-
-DYNAMIC_RANGE = [3.25, 2.5, 2.5, 2.5]
-DEFAULT_LUTS = {"C": 0.01, "M": 0.5, "Y": -0.13, "K": 0}
+VERSION = "1.2.0"
 
 
 @torch.inference_mode()
 def normalize_tensor(x: torch.Tensor, r: float) -> torch.Tensor:
-
     ratio: float = r / max(abs(float(x.min())), abs(float(x.max())))
     x *= max(ratio, 1.0)
-
     return x
 
 
@@ -27,41 +28,30 @@ original_callback = KDiffusionSampler.callback_state
 @torch.inference_mode()
 @wraps(original_callback)
 def center_callback(self, d):
-    if not getattr(self, "diffcg_enable", False) or getattr(self.p, "_ad_inner", False):
+    if getattr(self.p, "_ad_inner", False):
         return original_callback(self, d)
 
-    X = d["denoised"].detach().clone()
-    batchSize = X.size(0)
-    channels = len(self.LUTs)
+    params: DiffusionCGParams = getattr(self, "diffcg_params", None)
+    if not params:
+        return original_callback(self, d)
+
+    X: torch.Tensor = d["denoised"].detach().clone()
+    batchSize: int = X.size(0)
+    channels: int = len(params.LUTs)
 
     for b in range(batchSize):
         for c in range(channels):
 
-            if self.diffcg_recenter_strength > 0.0:
-                d["denoised"][b][c] += (
-                    self.LUTs[c] - X[b][c].mean()
-                ) * self.diffcg_recenter_strength
+            if params.rc_str > 0.0:
+                d["denoised"][b][c] += (params.LUTs[c] - X[b][c].mean()) * params.rc_str
 
-            if self.diffcg_normalize and d["i"] > self.diffcg_last_step:
-                d["denoised"][b][c] = normalize_tensor(X[b][c], DYNAMIC_RANGE[c])
+            if params.normalization and (d["i"] + 1) >= (params.total_step - 1):
+                d["denoised"][b][c] = normalize_tensor(X[b][c], params.dynamic_range)
 
     return original_callback(self, d)
 
 
 KDiffusionSampler.callback_state = center_callback
-
-
-# ["None", "txt2img", "img2img", "Both"]
-ac: str = getattr(shared.opts, "always_center", "None")
-an: str = getattr(shared.opts, "always_normalize", "None")
-
-c_t2i: bool = ac in ("txt2img", "Both")
-c_i2i: bool = ac in ("img2img", "Both")
-n_t2i: bool = an in ("txt2img", "Both")
-n_i2i: bool = an in ("img2img", "Both")
-
-default_sd: str = getattr(shared.opts, "default_arch", "1.5")
-adv_opt: str = getattr(shared.opts, "show_center_opt", False)
 
 
 class DiffusionCG(scripts.Script):
@@ -77,301 +67,153 @@ class DiffusionCG(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        with gr.Accordion(label=f"{self.title()} v{VERSION}", open=False):
+
+        with InputAccordion(
+            label=f"{self.title()} v{VERSION}",
+            open=False,
+            value=(
+                ((not is_img2img) and (c_t2i or n_t2i))
+                or (is_img2img and (c_i2i or n_i2i))
+            ),
+        ) as enable:
+
             with gr.Row():
-                enableG = gr.Checkbox(
-                    label="Enable (Global)",
-                    value=(
-                        ((not is_img2img) and (c_t2i or n_t2i))
-                        or (is_img2img and (c_i2i or n_i2i))
-                    ),
-                )
+
                 sd_ver = gr.Radio(
                     ["1.5", "XL"], value=default_sd, label="Stable Diffusion Version"
                 )
 
-            with gr.Row():
-                with gr.Group():
-                    gr.Markdown('<h3 align="center">Recenter</h3>')
-
-                    if not is_img2img:
-                        v = 1.0 if c_t2i else 0.0
-                    else:
-                        v = 1.0 if c_i2i else 0.0
+                with gr.Column():
 
                     rc_str = gr.Slider(
-                        label="Effect Strength",
+                        label="[Recenter]",
+                        info="Effect Strength",
                         minimum=0.0,
                         maximum=1.0,
                         step=0.2,
-                        value=v,
+                        value=(
+                            1.0
+                            if (((not is_img2img) and c_t2i) or (is_img2img and c_i2i))
+                            else 0.0
+                        ),
                     )
 
-                with gr.Group():
-                    gr.Markdown('<h3 align="center">Normalization</h3>')
-                    enableN = gr.Checkbox(
-                        label="Activate",
+                    normalization = gr.Checkbox(
+                        label="[Normalization]",
                         value=(((not is_img2img) and n_t2i) or (is_img2img and n_i2i)),
                     )
 
-            with gr.Accordion("Recenter Settings", visible=adv_opt, open=False):
-                with gr.Group(visible=(default_sd == "1.5")) as setting15:
-                    C = gr.Slider(
-                        label="C",
-                        minimum=-1.00,
-                        maximum=1.00,
-                        step=0.01,
-                        value=DEFAULT_LUTS["C"],
-                    )
-                    M = gr.Slider(
-                        label="M",
-                        minimum=-1.00,
-                        maximum=1.00,
-                        step=0.01,
-                        value=DEFAULT_LUTS["M"],
-                    )
-                    Y = gr.Slider(
-                        label="Y",
-                        minimum=-1.00,
-                        maximum=1.00,
-                        step=0.01,
-                        value=DEFAULT_LUTS["Y"],
-                    )
-                    K = gr.Slider(
-                        label="K",
-                        minimum=-1.00,
-                        maximum=1.00,
-                        step=0.01,
-                        value=DEFAULT_LUTS["K"],
-                    )
+            with gr.Accordion("Recenter Settings", open=False):
+                C, M, Y, K, L, a, b = advanced_settings(default_sd, sd_ver)
 
-                with gr.Group(visible=(default_sd == "XL")) as settingXL:
-                    L = gr.Slider(
-                        label="L", minimum=-1.00, maximum=1.00, step=0.01, value=0.0
-                    )
-                    a = gr.Slider(
-                        label="a", minimum=-1.00, maximum=1.00, step=0.01, value=0.0
-                    )
-                    b = gr.Slider(
-                        label="b", minimum=-1.00, maximum=1.00, step=0.01, value=0.0
-                    )
+        comps: list = []
 
-            def on_radio_change(choice):
-                if choice == "1.5":
-                    return [
-                        gr.Group.update(visible=True),
-                        gr.Group.update(visible=False),
-                    ]
-                else:
-                    return [
-                        gr.Group.update(visible=False),
-                        gr.Group.update(visible=True),
-                    ]
-
-            sd_ver.change(on_radio_change, sd_ver, [setting15, settingXL])
-
-        self.paste_field_names = [
-            (rc_str, "ReCenter Str"),
-            (enableN, "Normalization"),
-            (sd_ver, "SD_ver"),
-        ]
+        self.paste_field_names = []
         self.infotext_fields = [
-            (rc_str, "ReCenter Str"),
-            (enableN, "Normalization"),
-            (sd_ver, "SD_ver"),
+            (enable, "Diffusion CG Enable"),
+            (sd_ver, "Diffusion CG SD-Ver"),
+            (rc_str, "Diffusion CG Recenter"),
+            (normalization, "[Diff. CG] Normalization"),
+            (C, "Diffusion CG C"),
+            (M, "Diffusion CG M"),
+            (Y, "Diffusion CG Y"),
+            (K, "Diffusion CG K"),
+            (L, "Diffusion CG Y'"),
+            (a, "Diffusion CG Cb"),
+            (b, "Diffusion CG Cr"),
         ]
 
-        if adv_opt:
-            self.paste_field_names += [
-                (
-                    C,
-                    lambda d: (
-                        float(d["LUTs"].strip("[]").split(",")[0])
-                        if len(d.get("LUTs", "").split(",")) == 4
-                        else gr.update()
-                    ),
-                ),
-                (
-                    M,
-                    lambda d: (
-                        float(d["LUTs"].strip("[]").split(",")[1])
-                        if len(d.get("LUTs", "").split(",")) == 4
-                        else gr.update()
-                    ),
-                ),
-                (
-                    Y,
-                    lambda d: (
-                        float(d["LUTs"].strip("[]").split(",")[2])
-                        if len(d.get("LUTs", "").split(",")) == 4
-                        else gr.update()
-                    ),
-                ),
-                (
-                    K,
-                    lambda d: (
-                        float(d["LUTs"].strip("[]").split(",")[3])
-                        if len(d.get("LUTs", "").split(",")) == 4
-                        else gr.update()
-                    ),
-                ),
-                (
-                    L,
-                    lambda d: (
-                        float(d["LUTs"].strip("[]").split(",")[0])
-                        if len(d.get("LUTs", "").split(",")) == 3
-                        else gr.update()
-                    ),
-                ),
-                (
-                    a,
-                    lambda d: (
-                        float(d["LUTs"].strip("[]").split(",")[1])
-                        if len(d.get("LUTs", "").split(",")) == 3
-                        else gr.update()
-                    ),
-                ),
-                (
-                    b,
-                    lambda d: (
-                        float(d["LUTs"].strip("[]").split(",")[2])
-                        if len(d.get("LUTs", "").split(",")) == 3
-                        else gr.update()
-                    ),
-                ),
-            ]
-            self.infotext_fields += [
-                (
-                    C,
-                    lambda d: (
-                        float(d["LUTs"].strip("[]").split(",")[0])
-                        if len(d.get("LUTs", "").split(",")) == 4
-                        else gr.update()
-                    ),
-                ),
-                (
-                    M,
-                    lambda d: (
-                        float(d["LUTs"].strip("[]").split(",")[1])
-                        if len(d.get("LUTs", "").split(",")) == 4
-                        else gr.update()
-                    ),
-                ),
-                (
-                    Y,
-                    lambda d: (
-                        float(d["LUTs"].strip("[]").split(",")[2])
-                        if len(d.get("LUTs", "").split(",")) == 4
-                        else gr.update()
-                    ),
-                ),
-                (
-                    K,
-                    lambda d: (
-                        float(d["LUTs"].strip("[]").split(",")[3])
-                        if len(d.get("LUTs", "").split(",")) == 4
-                        else gr.update()
-                    ),
-                ),
-                (
-                    L,
-                    lambda d: (
-                        float(d["LUTs"].strip("[]").split(",")[0])
-                        if len(d.get("LUTs", "").split(",")) == 3
-                        else gr.update()
-                    ),
-                ),
-                (
-                    a,
-                    lambda d: (
-                        float(d["LUTs"].strip("[]").split(",")[1])
-                        if len(d.get("LUTs", "").split(",")) == 3
-                        else gr.update()
-                    ),
-                ),
-                (
-                    b,
-                    lambda d: (
-                        float(d["LUTs"].strip("[]").split(",")[2])
-                        if len(d.get("LUTs", "").split(",")) == 3
-                        else gr.update()
-                    ),
-                ),
-            ]
-
-        for comp in [enableG, sd_ver, rc_str, enableN, C, M, Y, K, L, a, b]:
+        for comp, name in self.infotext_fields:
             comp.do_not_save_to_config = True
+            self.paste_field_names.append(name)
+            comps.append(comp)
 
-        return [enableG, sd_ver, rc_str, enableN, C, M, Y, K, L, a, b]
+        return comps
 
     def before_hr(self, p, *args):
-        KDiffusionSampler.diffcg_normalize = False
+        KDiffusionSampler.diffcg_last_step = (
+            getattr(p, "hr_second_pass_steps", None) or p.steps
+        )
 
     def process(
         self,
         p,
-        enableG: bool,
+        enable: bool,
         sd_ver: str,
         rc_str: float,
-        enableN: bool,
+        normalization: bool,
         C: float,
         M: float,
         Y: float,
         K: float,
-        L: float,
-        a: float,
-        b: float,
+        Lu: float,
+        Cb: float,
+        Cr: float,
     ):
 
-        if "enableG" in self.xyzCache.keys():
-            enableG = self.xyzCache["enableG"].lower().strip() == "true"
-            del self.xyzCache["enableG"]
+        if "enable" in self.xyzCache.keys():
+            enable = self.xyzCache["enable"].lower().strip() == "true"
 
-        KDiffusionSampler.diffcg_enable = enableG
-        if not enableG:
-            if len(self.xyzCache.keys()) > 0:
-                print("\n[Diff. CG] X [X/Y/Z Plot] Extension is not Enabled!\n")
-            self.xyzCache.clear()
+        if not enable:
+            if len(self.xyzCache) > 0:
+                if "enable" not in self.xyzCache.keys():
+                    print("\n[Vec.CC] x [X/Y/Z Plot] Extension is not Enabled!\n")
+                self.xyzCache.clear()
+
+            setattr(KDiffusionSampler, "diffcg_params", None)
             return p
 
-        if "rc_str" in self.xyzCache.keys():
-            rc_str = float(self.xyzCache["rc_str"])
-        if "enableN" in self.xyzCache.keys():
-            enableN = self.xyzCache["enableN"].lower().strip() == "true"
+        rc_str = float(self.xyzCache.get("rc_str", rc_str))
 
-        if adv_opt:
-            C = self.xyzCache.get("C", C)
-            M = self.xyzCache.get("M", M)
-            Y = self.xyzCache.get("Y", Y)
-            K = self.xyzCache.get("K", K)
-            L = self.xyzCache.get("L", L)
-            a = self.xyzCache.get("a", a)
-            b = self.xyzCache.get("b", b)
+        if "normalization" in self.xyzCache.keys():
+            normalization = self.xyzCache["normalization"].lower().strip() == "true"
 
-        if sd_ver == "1.5":
-            KDiffusionSampler.LUTs = [-K, -M, C, Y]
-        else:
-            KDiffusionSampler.LUTs = [L, -a, b]
+        C = float(self.xyzCache.get("C", C))
+        M = float(self.xyzCache.get("M", M))
+        Y = float(self.xyzCache.get("Y", Y))
+        K = float(self.xyzCache.get("K", K))
+        Lu = float(self.xyzCache.get("Lu", Lu))
+        Cb = float(self.xyzCache.get("Cb", Cb))
+        Cr = float(self.xyzCache.get("Cr", Cr))
 
-        KDiffusionSampler.diffcg_recenter_strength = rc_str
-        KDiffusionSampler.diffcg_normalize = enableN
-        KDiffusionSampler.diffcg_last_step = (
-            getattr(p, "firstpass_steps", None) or p.steps
+        params = DiffusionCGParams(
+            getattr(p, "firstpass_steps", None) or p.steps,
+            enable,
+            sd_ver,
+            rc_str,
+            [-K, -M, C, Y] if (sd_ver == "1.5") else [Lu, -Cr, -Cb],
+            normalization,
+            (1.0 / SCALE_FACTOR["1.5"]) / 2.0,  # XL causes Noises...
         )
+
+        setattr(KDiffusionSampler, "diffcg_params", params)
 
         p.extra_generation_params.update(
             {
-                "ReCenter Str": rc_str,
-                "Normalization": enableN,
-                "SD_ver": sd_ver,
+                "Diffusion CG Enable": enable,
+                "Diffusion CG SD-Ver": sd_ver,
+                "Diffusion CG Recenter": rc_str,
+                "Diffusion CG Normalization": normalization,
             }
         )
 
-        if adv_opt:
-            if default_sd == "1.5":
-                p.extra_generation_params["LUTs"] = f"[{C}, {M}, {Y}, {K}]"
-            else:
-                p.extra_generation_params["LUTs"] = f"[{L}, {a}, {b}]"
+        if sd_ver == "1.5":
+            p.extra_generation_params.update(
+                {
+                    "Diffusion CG C": C,
+                    "Diffusion CG M": M,
+                    "Diffusion CG Y": Y,
+                    "Diffusion CG K": K,
+                }
+            )
+        else:
+            p.extra_generation_params.update(
+                {
+                    "Diffusion CG Y'": Lu,
+                    "Diffusion CG Cb": Cb,
+                    "Diffusion CG Cr": Cr,
+                }
+            )
 
         self.xyzCache.clear()
 
@@ -380,4 +222,4 @@ def restore_callback():
     KDiffusionSampler.callback_state = original_callback
 
 
-script_callbacks.on_script_unloaded(restore_callback)
+on_script_unloaded(restore_callback)

@@ -1,3 +1,6 @@
+### v1.2.0 - 2024 Aug.30
+- Major **Rewrite**
+
 ### v1.1.1 - 2024 Aug.30
 - Add Settings **Section**
 

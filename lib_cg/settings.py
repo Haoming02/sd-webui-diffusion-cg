@@ -43,15 +43,5 @@ def on_settings():
         ).needs_reload_ui(),
     )
 
-    opts.add_option(
-        "show_center_opt",
-        OptionInfo(
-            False,
-            "[Advanced] Show ReCenter Settings",
-            section=section,
-            category_id="sd",
-        ).needs_reload_ui(),
-    )
-
 
 on_ui_settings(on_settings)
