@@ -1,30 +1,33 @@
 from modules.sd_samplers_kdiffusion import KDiffusionSampler
 from modules import shared, scripts, script_callbacks
+from functools import wraps
 import gradio as gr
+import torch
 
 from scripts.cg_xyz import xyz_support
 
-VERSION = "v1.1.0"
+VERSION = "1.1.1"
 
 DYNAMIC_RANGE = [3.25, 2.5, 2.5, 2.5]
+DEFAULT_LUTS = {"C": 0.01, "M": 0.5, "Y": -0.13, "K": 0}
 
-Default_LUTs = {"C": 0.01, "M": 0.5, "Y": -0.13, "K": 0}
 
+@torch.inference_mode()
+def normalize_tensor(x: torch.Tensor, r: float) -> torch.Tensor:
 
-def normalize_tensor(x, r):
-    X = x.detach().clone()
+    ratio: float = r / max(abs(float(x.min())), abs(float(x.max())))
+    x *= max(ratio, 1.0)
 
-    ratio = r / max(abs(float(X.min())), abs(float(X.max())))
-    X *= max(ratio, 0.99)
-
-    return X
+    return x
 
 
 original_callback = KDiffusionSampler.callback_state
 
 
+@torch.inference_mode()
+@wraps(original_callback)
 def center_callback(self, d):
-    if not self.diffcg_enable or getattr(self.p, "_ad_inner", False):
+    if not getattr(self, "diffcg_enable", False) or getattr(self.p, "_ad_inner", False):
         return original_callback(self, d)
 
     X = d["denoised"].detach().clone()
@@ -39,7 +42,7 @@ def center_callback(self, d):
                     self.LUTs[c] - X[b][c].mean()
                 ) * self.diffcg_recenter_strength
 
-            if self.diffcg_normalize and (d["i"] + 1) > self.diffcg_last_step // 2:
+            if self.diffcg_normalize and d["i"] > self.diffcg_last_step:
                 d["denoised"][b][c] = normalize_tensor(X[b][c], DYNAMIC_RANGE[c])
 
     return original_callback(self, d)
@@ -49,30 +52,32 @@ KDiffusionSampler.callback_state = center_callback
 
 
 # ["None", "txt2img", "img2img", "Both"]
-ac = getattr(shared.opts, "always_center", "None")
-an = getattr(shared.opts, "always_normalize", "None")
-def_sd = getattr(shared.opts, "default_arch", "1.5")
-adv_opt = getattr(shared.opts, "show_center_opt", False)
+ac: str = getattr(shared.opts, "always_center", "None")
+an: str = getattr(shared.opts, "always_normalize", "None")
 
-c_t2i = ac in ("txt2img", "Both")
-c_i2i = ac in ("img2img", "Both")
-n_t2i = an in ("txt2img", "Both")
-n_i2i = an in ("img2img", "Both")
+c_t2i: bool = ac in ("txt2img", "Both")
+c_i2i: bool = ac in ("img2img", "Both")
+n_t2i: bool = an in ("txt2img", "Both")
+n_i2i: bool = an in ("img2img", "Both")
+
+default_sd: str = getattr(shared.opts, "default_arch", "1.5")
+adv_opt: str = getattr(shared.opts, "show_center_opt", False)
 
 
 class DiffusionCG(scripts.Script):
+
     def __init__(self):
         self.xyzCache = {}
         xyz_support(self.xyzCache)
 
     def title(self):
-        return "DiffusionCG"
+        return "Diffusion CG"
 
     def show(self, is_img2img):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        with gr.Accordion(f"Diffusion CG {VERSION}", open=False):
+        with gr.Accordion(label=f"{self.title()} v{VERSION}", open=False):
             with gr.Row():
                 enableG = gr.Checkbox(
                     label="Enable (Global)",
@@ -82,7 +87,7 @@ class DiffusionCG(scripts.Script):
                     ),
                 )
                 sd_ver = gr.Radio(
-                    ["1.5", "XL"], value=def_sd, label="Stable Diffusion Version"
+                    ["1.5", "XL"], value=default_sd, label="Stable Diffusion Version"
                 )
 
             with gr.Row():
@@ -110,37 +115,37 @@ class DiffusionCG(scripts.Script):
                     )
 
             with gr.Accordion("Recenter Settings", visible=adv_opt, open=False):
-                with gr.Group(visible=(def_sd == "1.5")) as setting15:
+                with gr.Group(visible=(default_sd == "1.5")) as setting15:
                     C = gr.Slider(
                         label="C",
                         minimum=-1.00,
                         maximum=1.00,
                         step=0.01,
-                        value=Default_LUTs["C"],
+                        value=DEFAULT_LUTS["C"],
                     )
                     M = gr.Slider(
                         label="M",
                         minimum=-1.00,
                         maximum=1.00,
                         step=0.01,
-                        value=Default_LUTs["M"],
+                        value=DEFAULT_LUTS["M"],
                     )
                     Y = gr.Slider(
                         label="Y",
                         minimum=-1.00,
                         maximum=1.00,
                         step=0.01,
-                        value=Default_LUTs["Y"],
+                        value=DEFAULT_LUTS["Y"],
                     )
                     K = gr.Slider(
                         label="K",
                         minimum=-1.00,
                         maximum=1.00,
                         step=0.01,
-                        value=Default_LUTs["K"],
+                        value=DEFAULT_LUTS["K"],
                     )
 
-                with gr.Group(visible=(def_sd == "XL")) as settingXL:
+                with gr.Group(visible=(default_sd == "XL")) as settingXL:
                     L = gr.Slider(
                         label="L", minimum=-1.00, maximum=1.00, step=0.01, value=0.0
                     )
@@ -350,15 +355,9 @@ class DiffusionCG(scripts.Script):
 
         KDiffusionSampler.diffcg_recenter_strength = rc_str
         KDiffusionSampler.diffcg_normalize = enableN
-
-        if (
-            not hasattr(p, "enable_hr")
-            and not shared.opts.img2img_fix_steps
-            and getattr(p, "denoising_strength", 1.0) < 1.0
-        ):
-            KDiffusionSampler.diffcg_last_step = int(p.steps * p.denoising_strength) + 1
-        else:
-            KDiffusionSampler.diffcg_last_step = p.steps
+        KDiffusionSampler.diffcg_last_step = (
+            getattr(p, "firstpass_steps", None) or p.steps
+        )
 
         p.extra_generation_params.update(
             {
@@ -369,7 +368,7 @@ class DiffusionCG(scripts.Script):
         )
 
         if adv_opt:
-            if def_sd == "1.5":
+            if default_sd == "1.5":
                 p.extra_generation_params["LUTs"] = f"[{C}, {M}, {Y}, {K}]"
             else:
                 p.extra_generation_params["LUTs"] = f"[{L}, {a}, {b}]"

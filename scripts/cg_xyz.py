@@ -38,14 +38,16 @@ def xyz_support(cache: dict):
     ]
 
     if getattr(shared.opts, "show_center_opt", False):
-        extra_axis_options += [
-            xyz_grid.AxisOption("[Diff. CG] C", float, apply_field("C")),
-            xyz_grid.AxisOption("[Diff. CG] M", float, apply_field("M")),
-            xyz_grid.AxisOption("[Diff. CG] Y", float, apply_field("Y")),
-            xyz_grid.AxisOption("[Diff. CG] K", float, apply_field("K")),
-            xyz_grid.AxisOption("[Diff. CG] L", float, apply_field("L")),
-            xyz_grid.AxisOption("[Diff. CG] a", float, apply_field("a")),
-            xyz_grid.AxisOption("[Diff. CG] b", float, apply_field("b")),
-        ]
+        extra_axis_options.extend(
+            [
+                xyz_grid.AxisOption("[Diff. CG] C", float, apply_field("C")),
+                xyz_grid.AxisOption("[Diff. CG] M", float, apply_field("M")),
+                xyz_grid.AxisOption("[Diff. CG] Y", float, apply_field("Y")),
+                xyz_grid.AxisOption("[Diff. CG] K", float, apply_field("K")),
+                xyz_grid.AxisOption("[Diff. CG] L", float, apply_field("L")),
+                xyz_grid.AxisOption("[Diff. CG] a", float, apply_field("a")),
+                xyz_grid.AxisOption("[Diff. CG] b", float, apply_field("b")),
+            ]
+        )
 
     xyz_grid.axis_options.extend(extra_axis_options)

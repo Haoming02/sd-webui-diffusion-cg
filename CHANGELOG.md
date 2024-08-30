@@ -1,3 +1,6 @@
+### v1.1.1 - 2024 Aug.30
+- Add Settings **Section**
+
 ### v1.1.0 - 2024 May.06
 - Add **X/Y/Z Plot** Support
 
