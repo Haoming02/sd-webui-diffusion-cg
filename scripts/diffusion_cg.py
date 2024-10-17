@@ -70,7 +70,6 @@ class DiffusionCG(scripts.Script):
 
         with InputAccordion(
             label=f"{self.title()} v{VERSION}",
-            open=False,
             value=(
                 ((not is_img2img) and (c_t2i or n_t2i))
                 or (is_img2img and (c_i2i or n_i2i))
