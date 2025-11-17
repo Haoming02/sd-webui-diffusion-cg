@@ -1,5 +1,10 @@
-### v1.2.0 - 2024 Aug.30
+### v2.0.0 - 2025 Nov.14
 - Major **Rewrite**
+
+<br>
+
+### v1.2.0 - 2024 Aug.30
+- **Rewrite**
 
 ### v1.1.1 - 2024 Aug.30
 - Add Settings **Section**
@@ -9,6 +14,8 @@
 
 ### v1.0.0 - 2024 Mar.07
 - Extension "**Released**"
+
+<br>
 
 ### v0.5.0 - 2024 Jan.09
 - Add **Infotext**
@@ -39,7 +46,7 @@
 
 ### v0.1.3 - 2023 Nov.20
 - Improved **Compatibility**
--
+
 ### v0.1.2 - 2023 Nov.20
 - Improved(?) **Normalization**
 
